@@ -1,0 +1,21 @@
+services:
+    comgateConfig: Ages\PaymentGateway\Config\ComgateConfig(
+        merchant: ''
+        secret: ''
+        test: true
+        # gatewayUrl: https://payments.comgate.cz/v1.0/    # výchozí hodnota
+    )
+
+    goPayConfig: Ages\PaymentGateway\Config\GoPayConfig(
+        clientId: ''
+        clientSecret: ''
+        goid: ''
+        returnUrl: ''
+        notificationUrl: ''
+        test: true
+        # scope: payment-all     # výchozí hodnota
+        # language: CS           # výchozí hodnota
+        # timeout: 30            # výchozí hodnota
+    )
+
+    - Ages\PaymentGateway\PaymentGateway
