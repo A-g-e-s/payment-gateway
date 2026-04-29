@@ -4,12 +4,14 @@ namespace Ages\PaymentGateway;
 
 use Ages\PaymentGateway\Config\ComgateConfig;
 use Ages\PaymentGateway\Config\GoPayConfig;
+use Ages\PaymentGateway\Entity\Enum\Gateway;
+use Ages\PaymentGateway\Exception\GatewayInitializationException;
 use Ages\PaymentGateway\Gateway\ComgateGateway;
+use Ages\PaymentGateway\Gateway\GatewayInterface;
 use Ages\PaymentGateway\Gateway\GoPayGateway;
 use Contributte\Comgate\Comgate;
 use Contributte\Comgate\Gateway\PaymentService as ComgatePaymentService;
 use Contributte\Comgate\Http\HttpClient as ComgateHttpClient;
-use Ages\PaymentGateway\Exception\GatewayInitializationException;
 use GoPay\Api;
 use GoPay\Payments as GoPayPayments;
 use GuzzleHttp\Client as GuzzleClient;
@@ -17,8 +19,8 @@ use GuzzleHttp\Client as GuzzleClient;
 readonly class PaymentGateway
 {
 
-    public ComgateGateway|null $comgate;
-    public GoPayGateway|null $gopay;
+    private ComgateGateway|null $comgate;
+    private GoPayGateway|null $gopay;
 
     public function __construct(
         ComgateConfig|null $comgateConfig = null,
@@ -35,6 +37,22 @@ readonly class PaymentGateway
         $httpClient = new ComgateHttpClient($guzzle, $comgate);
 
         return new ComgateGateway(new ComgatePaymentService($httpClient));
+    }
+
+    public function gateway(Gateway $gateway): GatewayInterface
+    {
+        $instance = match ($gateway) {
+            Gateway::Comgate => $this->comgate,
+            Gateway::GoPay   => $this->gopay,
+        };
+
+        if ($instance === null) {
+            throw new GatewayInitializationException(
+                sprintf('Gateway %s is not configured', $gateway->name)
+            );
+        }
+
+        return $instance;
     }
 
     private function buildGoPay(GoPayConfig $config): GoPayGateway

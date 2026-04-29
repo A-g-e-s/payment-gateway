@@ -47,10 +47,22 @@ Obě konfigurace jsou **volitelné** — shop používající pouze Comgate vyne
 
 ## Použití
 
+Brána se vybírá pomocí enum `Gateway` a metody `gateway()`:
+
+```php
+use Ages\PaymentGateway\Entity\Enum\Gateway;
+
+$this->paymentGateway->gateway(Gateway::Comgate)->createPayment($payment);
+$this->paymentGateway->gateway(Gateway::GoPay)->createPayment($payment);
+```
+
+Pokud brána není nakonfigurována, metoda hodí `GatewayInitializationException`.
+
 ### Vytvoření platby
 
 ```php
 use Ages\PaymentGateway\Entity\CreatePayment;
+use Ages\PaymentGateway\Entity\Enum\Gateway;
 use Brick\Money\Money;
 
 $payment = CreatePayment::of(
@@ -61,11 +73,7 @@ $payment = CreatePayment::of(
     fullName: $order->invoiceFullName,
 );
 
-// Comgate
-$res = $this->paymentGateway->comgate->createPayment($payment);
-
-// nebo GoPay
-$res = $this->paymentGateway->gopay->createPayment($payment);
+$res = $this->paymentGateway->gateway(Gateway::Comgate)->createPayment($payment);
 
 if (!$res->ok) {
     // $res->errorCode, $res->errorMessage
@@ -79,7 +87,9 @@ $order->transactionUrl = $res->redirectUrl;   // URL pro přesměrování zákaz
 ### Stav platby
 
 ```php
-$res = $this->paymentGateway->comgate->paymentStatus($order->transactionId);
+use Ages\PaymentGateway\Entity\Enum\Gateway;
+
+$res = $this->paymentGateway->gateway(Gateway::Comgate)->paymentStatus($order->transactionId);
 
 if (!$res->ok) {
     // chyba komunikace s bránou
@@ -107,9 +117,10 @@ echo $res->refId;             // číslo objednávky
 ### Refundace
 
 ```php
+use Ages\PaymentGateway\Entity\Enum\Gateway;
 use Brick\Money\Money;
 
-$res = $this->paymentGateway->comgate->refundPayment(
+$res = $this->paymentGateway->gateway(Gateway::Comgate)->refundPayment(
     transactionId: $order->transactionId,
     amount:        Money::of('150.00', 'CZK'),
 );
@@ -122,7 +133,9 @@ if (!$res->ok) {
 ### Storno (zrušení čekající platby)
 
 ```php
-$res = $this->paymentGateway->comgate->stornoPayment($order->transactionId);
+use Ages\PaymentGateway\Entity\Enum\Gateway;
+
+$res = $this->paymentGateway->gateway(Gateway::Comgate)->stornoPayment($order->transactionId);
 
 if (!$res->ok) {
     // chyba na straně brány
@@ -193,13 +206,16 @@ Všechny výjimky rozšiřují `Ages\PaymentGateway\Exception\PaymentGatewayExce
 | `GatewayInitializationException` | Nepodaří se sestavit klienta brány                       |
 | `InvalidGatewayResponseException`| Brána vrátí neočekávaný formát odpovědi                  |
 
+| `GatewayInitializationException` je hozena i v případě, kdy zavoláte `gateway()` pro bránu, která nebyla nakonfigurována.
+
 ```php
+use Ages\PaymentGateway\Entity\Enum\Gateway;
 use Ages\PaymentGateway\Exception\PaymentGatewayException;
 
 try {
-    $res = $this->paymentGateway->comgate->createPayment($payment);
+    $res = $this->paymentGateway->gateway(Gateway::Comgate)->createPayment($payment);
 } catch (PaymentGatewayException $e) {
-    // infrastrukturní chyba (síť, neočekávaný formát, …)
+    // infrastrukturní chyba (síť, neočekávaný formát, nekonfigurovaná brána, …)
     // chyba obchodní logiky (zamítnutá platba) je v $res->ok = false
 }
 ```
@@ -216,6 +232,7 @@ src/
 │   └── GatewayConfig.php         volitelný wrapper obou konfigurací
 ├── Entity/
 │   ├── Enum/
+│   │   ├── Gateway.php           výběr brány (Comgate, GoPay)
 │   │   └── PaymentStatus.php     normalizované stavy obou bran
 │   ├── CreatePayment.php         vstupní entita pro vytvoření platby
 │   ├── PaymentResult.php
@@ -230,5 +247,5 @@ src/
 │   ├── GatewayInterface.php      createPayment, paymentStatus, refundPayment, stornoPayment
 │   ├── ComgateGateway.php
 │   └── GoPayGateway.php
-└── PaymentGateway.php            DI entry point — drží ComgateGateway|null + GoPayGateway|null
+└── PaymentGateway.php            DI entry point — gateway(Gateway) vrátí GatewayInterface
 ```
