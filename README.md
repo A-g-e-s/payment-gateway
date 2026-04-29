@@ -1,6 +1,6 @@
 # ages/payment-gateway
 
-Jednotné API pro platební brány **Comgate** a **GoPay**. Oba integrace sdílejí stejné entity a rozhraní — přepnutí brány nevyžaduje změnu aplikačního kódu.
+Jednotné API pro platební brány **Comgate** a **GoPay**. Obě integrace sdílejí stejné entity a rozhraní — přepnutí brány nevyžaduje změnu aplikačního kódu.
 
 ## Požadavky
 
@@ -22,7 +22,7 @@ services:
     goPayConfig: Ages\PaymentGateway\Config\GoPayConfig(
         clientId:        'my-client-id'
         clientSecret:    'my-client-secret'
-        goid:            '8123456789'
+        goid:            'goPay-id'
         returnUrl:       'https://shop.cz/payment/return'
         notificationUrl: 'https://shop.cz/payment/notify'
         test:            false
