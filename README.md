@@ -71,6 +71,8 @@ $payment = CreatePayment::of(
     refId:    $order->code,
     email:    $order->email,
     fullName: $order->invoiceFullName,
+    language: 'sk',   // volitelné – jazyk platební stránky (ISO 639-1)
+    country:  'SK',   // volitelné – země plátce (ISO 3166-1 alpha-2)
 );
 
 $res = $this->paymentGateway->gateway(Gateway::Comgate)->createPayment($payment);
@@ -83,6 +85,15 @@ if (!$res->ok) {
 $order->transactionId  = $res->transactionId;
 $order->transactionUrl = $res->redirectUrl;   // URL pro přesměrování zákazníka
 ```
+
+#### Jazyk a země
+
+| Parametr   | Comgate                                                                                  | GoPay                                                              |
+|------------|------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
+| `language` | `lang` platební stránky; umí `cs`, `sk`, `en`, `pl`, `hu`, `de`, jinak / bez něj čeština | `lang` platby (`SK`); jazyk, který GoPay neumí, nebo bez něj = jazyk z `GoPayConfig` |
+| `country`  | `country` – brána nabídne platební metody té země; bez něj `ALL`                         | nepoužívá se                                                       |
+
+Velikost písmen nevadí, `CreatePayment` jazyk převede na malá a zemi na velká písmena.
 
 ### Stav platby
 

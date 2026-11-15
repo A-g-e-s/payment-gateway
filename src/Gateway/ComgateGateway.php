@@ -9,6 +9,9 @@ use Ages\PaymentGateway\Entity\PaymentStatusResult;
 use Ages\PaymentGateway\Entity\RefundResult;
 use Ages\PaymentGateway\Entity\StornoResult;
 use Brick\Money\Money;
+use Contributte\Comgate\Entity\Codes\CountryCode;
+use Contributte\Comgate\Entity\Codes\LangCode;
+use Contributte\Comgate\Entity\Codes\PaymentMethodCode;
 use Contributte\Comgate\Entity\Payment;
 use Contributte\Comgate\Entity\PaymentStatus as ComgatePaymentStatus;
 use Contributte\Comgate\Entity\Refund;
@@ -18,18 +21,26 @@ use Contributte\Comgate\Gateway\PaymentService;
 class ComgateGateway implements GatewayInterface
 {
 
+    /** Jazyky platební stránky, které bráně posíláme; jiný jazyk = výchozí čeština brány. */
+    public const array Languages = ['cs', 'sk', 'en', 'pl', 'hu', 'de'];
+
     public function __construct(private readonly PaymentService $service)
     {
     }
 
     public function createPayment(CreatePayment $payment): PaymentResult
     {
+        $language = $payment->getLanguage();
+
         $comgatePayment = Payment::of(
             money:    $payment->getMoney(),
             label:    $payment->getLabel(),
             refId:    $payment->getRefId(),
             email:    $payment->getEmail(),
             fullName: $payment->getFullName(),
+            method:   PaymentMethodCode::ALL,
+            country:  $payment->getCountry() ?? CountryCode::ALL,
+            lang:     $language !== null && in_array($language, self::Languages, true) ? $language : LangCode::CS,
         );
 
         $res = $this->service->create($comgatePayment);
