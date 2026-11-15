@@ -12,8 +12,10 @@ use Ages\PaymentGateway\Entity\StornoResult;
 use Brick\Math\RoundingMode;
 use Brick\Money\Money;
 use Ages\PaymentGateway\Exception\InvalidGatewayResponseException;
+use GoPay\Definition\Language;
 use GoPay\Http\Response;
 use GoPay\Payments;
+use ReflectionClass;
 
 readonly class GoPayGateway implements GatewayInterface
 {
@@ -31,7 +33,7 @@ readonly class GoPayGateway implements GatewayInterface
             ->getAmount()
             ->toInt();
 
-        $res = $this->call($this->payments->createPayment([
+        $rawPayment = [
             'payer'             => [
                 'contact' => [
                     'first_name' => $payment->getFullName(),
@@ -49,7 +51,14 @@ readonly class GoPayGateway implements GatewayInterface
                 'return_url'       => $this->config->getReturnUrl(),
                 'notification_url' => $this->config->getNotificationUrl(),
             ],
-        ]));
+        ];
+        // jazyk platební stránky; bez něj (nebo v jazyce, který GoPay neumí) jazyk z GoPayConfig
+        $language = $this->language($payment->getLanguage());
+        if ($language !== null) {
+            $rawPayment['lang'] = $language;
+        }
+
+        $res = $this->call($this->payments->createPayment($rawPayment));
 
         if (!$res->hasSucceed()) {
             return PaymentResult::failure(
@@ -106,6 +115,16 @@ readonly class GoPayGateway implements GatewayInterface
     public function stornoPayment(string $transactionId): StornoResult
     {
         return StornoResult::successNoop();
+    }
+
+    /** ISO 639-1 (sk) → kód jazyka GoPay (SK), null = GoPay jazyk neumí */
+    private function language(string|null $language): string|null
+    {
+        if ($language === null) {
+            return null;
+        }
+        $code = strtoupper($language);
+        return in_array($code, (new ReflectionClass(Language::class))->getConstants(), true) ? $code : null;
     }
 
     private function call(mixed $res): Response
